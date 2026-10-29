@@ -32,32 +32,106 @@ which before you quote any of it at a party.
 - **Genre, language and country totals double-count by design.** A title with
   three genres counts in all three, so those totals exceed the number of titles.
 
-## Getting your data
+---
 
-1. Sign in and open [netflix.com/viewingactivity](https://www.netflix.com/viewingactivity)
-2. Choose the profile you want at the top of the page
-3. Scroll to the bottom and click **Download all**
-4. Drop the resulting `NetflixViewingHistory.csv` onto the dashboard
+## Step 1 — Download your viewing history
 
-There is also an **Explore with sample data** link on the landing page if you
-just want to look around. The sample is synthetic.
+Netflix keeps this behind a slightly buried page, and the export is **per
+profile**, so make sure the right one is selected before you download.
 
-## The TMDB key
+1. Sign in at [netflix.com](https://www.netflix.com) in a desktop browser.
+2. Go to **[netflix.com/viewingactivity](https://www.netflix.com/viewingactivity)**.
+3. At the top of the page there is a profile selector showing an avatar and a
+   name. If your household shares an account, pick the profile whose history you
+   want — each profile has its own, and they are not combined.
+4. Scroll to the very bottom of the list and click **Download all**.
+5. Your browser saves a file called `NetflixViewingHistory.csv`.
 
-Without a key the dashboard falls back to [TVMaze](https://www.tvmaze.com/api),
-which is free and needs no signup but covers **series only** — films get no
-genre, language, country or runtime.
+It arrives in seconds — this is not the "request all my personal information"
+flow, which is a separate feature and takes about 30 days.
 
-A free [TMDB key](https://www.themoviedb.org/settings/api) takes about a minute
-to get, needs no payment details, and unlocks films plus age ratings, release
-dates, production countries, posters and total episode counts. Paste it into
-**Settings → TMDB API key**. It is stored in your browser and sent only to
-`api.themoviedb.org`.
+The file looks like this, newest first:
 
-Enrichment is a one-time cost; results are cached locally. You can start without
-a key and add one later — anything fetched during a keyless run is automatically
-re-queued once a key is present. **Settings → Export cache** writes a JSON file
-you can import elsewhere so you never re-fetch.
+```csv
+"Title","Date"
+"Peaky Blinders: Season 4: Dangerous","9/25/26"
+"Glass Onion: A Knives Out Mystery","9/21/26"
+```
+
+Now drop it onto the dashboard:
+
+![The landing page, with the drop zone and the sample-data link](docs/landing.jpg)
+
+Nothing leaves your machine — the file is read with the browser's `FileReader`
+and parsed in a `<script type="module">`. There is no server to upload it to.
+
+> Not ready to use your own data? Click **Explore with sample data** for a
+> synthetic 3,487-row history.
+
+## Step 2 — Get a TMDB API key (optional, but it unlocks most of the dashboard)
+
+Without a key the dashboard still works. It falls back to
+[TVMaze](https://www.tvmaze.com/api), which is free, needs no signup, and covers
+**series only** — so your films get no genre, language, country or runtime, and
+the Films and Content tabs stay mostly empty.
+
+A free key from [TMDB](https://www.themoviedb.org/) fixes that. It takes about a
+minute and needs no payment details.
+
+1. Create an account at
+   **[themoviedb.org/signup](https://www.themoviedb.org/signup)** and verify your
+   email address.
+2. Go to **[themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)**.
+3. Click **Request an API key** and choose **Developer**.
+4. Accept the terms, then fill in the short form. For a personal project you can
+   put your own name as the application name, this repository's URL (or any URL
+   you control) as the application URL, and a one-line description such as
+   *"personal viewing-history statistics"*. Approval is instant.
+5. The settings page now shows two credentials. **Copy the one labelled
+   `API Key`** — a 32-character hexadecimal string. The much longer
+   `API Read Access Token` is the v4 credential and this app does not use it.
+
+Paste it into the dashboard under the **⚙** button in the header:
+
+![The settings panel, with the TMDB API key field](docs/settings.jpg)
+
+Click **Save**. The key is stored in your browser's local storage and is sent
+only to `api.themoviedb.org`. It is never committed, logged, or transmitted
+anywhere else — [see for yourself](src/data/metadata.js).
+
+## Step 3 — Enrich
+
+Click **Enrich** in the header. The dashboard looks up every distinct title and
+caches the result.
+
+![The enrichment panel](docs/enrich.jpg)
+
+Roughly 700 lookups for a decade of viewing, which takes a couple of minutes
+with a key and rather longer without one, since TVMaze is rate-limited harder.
+It only has to happen once.
+
+- You can start without a key and add one later — anything fetched during a
+  keyless run is automatically re-queued once a key is present.
+- **Settings → Export cache** writes a JSON file you can import on another
+  browser or machine so you never re-fetch.
+- Titles that could not be matched are listed on the **Data** tab, where you can
+  also reclassify a film as a series (or vice versa) and move titles between the
+  kids and grown-up buckets.
+
+## Using the dashboard
+
+Seven tabs, and four switches above them that apply to everything at once:
+
+| Switch | Effect |
+|---|---|
+| **Measure** | Recomputes every chart as a count of titles or as estimated hours |
+| **Type** | All content, series only, or films only |
+| **Audience** | All, grown-up only, or kids only |
+| **Years** | Click to isolate a year, click more to add, shift-click to jump to one |
+
+Clicking a genre, language or country filters the whole dashboard by it.
+Clicking a bar in most lists opens the viewing events behind it. The **▦**
+button hides and shows individual cards, and your layout is remembered.
 
 ## Running it locally
 
@@ -76,7 +150,7 @@ There is no build step, no package manager and no dependencies.
 
 Three layers stacked on top of a two-column CSV:
 
-| Layer | What it does |
+| Module | Responsibility |
 |---|---|
 | `src/data/csv.js` | Parses the export, including quoted fields and locale-dependent dates |
 | `src/data/classify.js` | Turns title strings into shows, seasons and episodes |
@@ -110,6 +184,11 @@ sample/                 synthetic data for the demo
 The included workflow publishes the repository root to GitHub Pages on every
 push to `main`. Enable it under **Settings → Pages → Build and deployment →
 Source: GitHub Actions**, then update the dashboard link at the top of this file.
+
+Note that a GitHub Actions secret **cannot** be used to ship a shared TMDB key
+with a Pages site: Pages serves static files, so anything a workflow writes into
+the deployed bundle is readable by every visitor. Each person brings their own
+key instead, which is why the field exists in Settings.
 
 ## Contributing
 
