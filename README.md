@@ -5,7 +5,7 @@ genres, languages, countries, streaks and a lot of superlatives.
 
 Everything runs in the browser. Your viewing history is never uploaded anywhere.
 
-**[Open the dashboard →](https://USERNAME.github.io/netflix-viewing-stats/)**
+**[Open the dashboard →](https://tgebarowski.github.io/netflix-viewing-stats/)**
 
 ![The overview tab](docs/screenshot.jpg)
 
@@ -62,7 +62,7 @@ you can import elsewhere so you never re-fetch.
 ## Running it locally
 
 ```bash
-git clone https://github.com/USERNAME/netflix-viewing-stats.git
+git clone https://github.com/tgebarowski/netflix-viewing-stats.git
 cd netflix-viewing-stats
 python3 -m http.server 8000
 ```
