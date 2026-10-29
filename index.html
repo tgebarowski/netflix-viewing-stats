@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Netflix Viewing History — Stats</title>
+<meta name="description" content="Turn a Netflix viewing-history export into a decade of statistics, entirely in your browser.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='20' font-size='20'>📺</text></svg>">
+<link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+
+<div id="landing" class="drop-wrap">
+  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin:0 auto">
+    <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M8 4v5M16 4v5"/>
+  </svg>
+  <h2 style="font-size:24px;letter-spacing:-.03em;margin:18px 0 8px">Netflix Viewing History</h2>
+  <p style="color:var(--fg2);margin:0 0 30px">Turn your export into a decade of statistics.</p>
+
+  <div class="drop" id="drop">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--fg3)" stroke-width="1.5" style="margin:0 auto">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 5v13"/>
+    </svg>
+    <h2>Drop your CSV here</h2>
+    <p>or click to choose a file</p>
+    <p class="hint">Everything runs in your browser. Your file is never uploaded.</p>
+    <input type="file" id="file" accept=".csv,text/csv" hidden>
+  </div>
+
+  <p class="hint" style="margin-top:14px">
+    Haven't got your export to hand? <a href="#" id="btnSample">Explore with sample data</a>.
+  </p>
+
+  <div class="howto">
+    <h4>Getting your file</h4>
+    <ol>
+      <li>Go to <code>netflix.com/viewingactivity</code> while signed in</li>
+      <li>Pick the profile you want at the top of the page</li>
+      <li>Scroll to the bottom and click <b>Download all</b></li>
+      <li>Drop the resulting <code>NetflixViewingHistory.csv</code> above</li>
+    </ol>
+  </div>
+</div>
+
+<div id="app" hidden>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8">
+        <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M8 4v5M16 4v5"/>
+      </svg>
+      <h1>Viewing History</h1>
+      <span class="sub" id="brandSub"></span>
+    </div>
+    <div class="status" id="metaStatus"></div>
+    <button class="btn" id="btnEnrich">Enrich metadata</button>
+    <button class="btn ghost icon" id="btnCards" title="Show / hide cards">▦</button>
+    <button class="btn ghost icon" id="btnSettings" title="Settings">⚙</button>
+    <button class="btn ghost icon" id="btnTheme" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<nav class="tabs"><div class="tabs-in" id="tabs"></div></nav>
+
+<div class="filters"><div class="filters-in">
+  <div class="fgroup"><span class="flabel">Measure</span>
+    <div class="seg" id="segBasis">
+      <button data-v="count" class="on">Titles</button>
+      <button data-v="hours">Hours</button>
+    </div>
+  </div>
+  <div class="fgroup"><span class="flabel">Type</span>
+    <div class="seg" id="segType">
+      <button data-v="all" class="on">All</button>
+      <button data-v="episode">Series</button>
+      <button data-v="movie">Movies</button>
+    </div>
+  </div>
+  <div class="fgroup"><span class="flabel">Audience</span>
+    <div class="seg" id="segAud">
+      <button data-v="all" class="on">All</button>
+      <button data-v="adult">Adults</button>
+      <button data-v="kids">Kids</button>
+    </div>
+  </div>
+  <div class="fgroup"><span class="flabel">Years</span>
+    <div class="years" id="yearChips"></div>
+  </div>
+  <div class="chips" id="activeChips"></div>
+</div></div>
+
+<main><div class="grid" id="grid"></div></main>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<!-- ============================ SETTINGS PANEL -->
+<div class="panel" id="panelSettings">
+  <div class="panel-box">
+    <div class="panel-h"><h3>Settings</h3><button class="btn ghost icon" data-close>✕</button></div>
+    <div class="panel-b">
+      <h4>TMDB API key</h4>
+      <div class="field">
+        <input type="password" id="tmdbKey" placeholder="Paste your TMDB API key (v3 auth)" autocomplete="off">
+        <button class="btn" id="btnSaveKey">Save</button>
+      </div>
+      <p class="help">
+        Your CSV contains only titles and dates. Genres, languages, countries and runtimes come from
+        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">TMDB</a> —
+        free, instant, no card. Without a key the app falls back to TVMaze, which covers series only.
+        The key is stored in this browser and sent only to api.themoviedb.org.
+      </p>
+
+      <h4>Metadata cache</h4>
+      <div id="cacheInfo" class="help"></div>
+      <div class="field" style="margin-top:10px">
+        <button class="btn" id="btnExport">Export cache</button>
+        <button class="btn" id="btnImport">Import cache</button>
+        <button class="btn" id="btnClearCache">Clear cache</button>
+        <input type="file" id="importFile" accept=".json" hidden>
+      </div>
+      <p class="help">Exporting lets you keep your enriched metadata across browsers and machines without re-fetching.</p>
+
+      <h4>Data</h4>
+      <div class="field">
+        <button class="btn" id="btnReload">Load a different CSV</button>
+        <button class="btn" id="btnClearAll">Clear everything</button>
+      </div>
+
+      <h4>What this can and cannot know</h4>
+      <p class="help">
+        Netflix's export has two columns: title and date. There are <b>no timestamps</b>, so hour-of-day
+        stats are impossible. There are <b>no durations</b>, so every hours figure is an estimate built from
+        TMDB/TVMaze runtimes multiplied by episodes watched. Netflix also logs a row once you watch enough
+        of something, not for partial views, so totals skew slightly low.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ ENRICH PANEL -->
+<div class="panel" id="panelEnrich">
+  <div class="panel-box">
+    <div class="panel-h"><h3>Enrich metadata</h3><button class="btn ghost icon" data-close>✕</button></div>
+    <div class="panel-b">
+      <div id="enrichIntro"></div>
+      <div class="prog"><i id="progBar"></i></div>
+      <div class="help" id="progText" style="margin-bottom:10px">Idle</div>
+      <div class="plog" id="progLog"></div>
+      <div class="field" style="margin-top:14px">
+        <button class="btn primary" id="btnRun">Start</button>
+        <button class="btn" id="btnStop" disabled>Stop</button>
+        <span style="flex:1"></span>
+        <label class="tg" style="padding:0"><input type="checkbox" id="chkRefetch"><span>Re-fetch cached</span></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CARDS PANEL -->
+<div class="panel" id="panelCards">
+  <div class="panel-box wide">
+    <div class="panel-h"><h3>Cards</h3>
+      <button class="btn ghost" id="btnAllOn">All on</button>
+      <button class="btn ghost" id="btnAllOff">All off</button>
+      <button class="btn ghost icon" data-close>✕</button></div>
+    <div class="panel-b" id="cardToggles"></div>
+  </div>
+</div>
+
+<!-- ============================ TITLE PANEL -->
+<div class="panel" id="panelTitle">
+  <div class="panel-box wide">
+    <div class="panel-h"><h3 id="titlePanelH">Titles</h3><button class="btn ghost icon" data-close>✕</button></div>
+    <div class="panel-b" id="titlePanelB"></div>
+  </div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

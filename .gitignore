@@ -1,0 +1,18 @@
+# Credentials — never commit
+*.key
+*.keys
+.env
+.env.*
+
+# Personal viewing data (the sample under sample/ is synthetic and is committed)
+NetflixViewingHistory*.csv
+netflix-metadata-cache.json
+
+# Local tooling
+.claude/
+.vscode/
+.idea/
+.DS_Store
+
+# Unrelated file that happened to be in this folder — keep it out of the repo
+DELE_B2_Examen5.pdf
